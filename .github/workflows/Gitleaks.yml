@@ -23,8 +23,10 @@ jobs:
           gitleaks detect --source=. --verbose || true  # Ensures it doesn't break the workflow
 
       - name: Notify Discord if secrets found
-        if: steps.gitleaks_scan.outcome == 'failure'
+        if: steps.gitleaks_scan.outcome == 'failure' && env.DISCORD_WEBHOOK != ''
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
           curl -H "Content-Type: application/json" \
-          -X POST -d '{"username": "Gitleaks Bot", "content": "⚠️ **Gitleaks Alert**: Secrets detected in the repository!\nCheck GitHub Actions logs: https://github.com/SirZeus-Sec/Gitleaks-test-CI/actions"}' \
-          ${{ secrets.DISCORD_WEBHOOK }}
+          -X POST -d '{"username": "Gitleaks Bot", "content": "⚠️ **Gitleaks Alert**: Secrets detected!\nCheck GitHub Actions logs: https://github.com/SirZeus-Sec/Gitleaks-test-CI/actions"}' \
+          $DISCORD_WEBHOOK
