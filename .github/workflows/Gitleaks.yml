@@ -1,44 +1,27 @@
 name: Gitleaks Secret Scan
 
-on:
-  push:
-    branches:
-      - main
-      - test-gitleaks
-  pull_request:
-    branches:
-      - main
-      - test-gitleaks
+on: push
 
 jobs:
   secret_scan:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout Repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Install Gitleaks
         run: |
-          curl -sSL https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks-linux-amd64 -o gitleaks
+          wget -qO - https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks-linux-amd64.tar.gz | tar xz
           chmod +x gitleaks
           sudo mv gitleaks /usr/local/bin/
 
-      - name: Run Gitleaks Scan
-        id: gitleaks
-        continue-on-error: true
-        run: |
-          gitleaks detect --source=. --verbose --report-format=json --report-path=gitleaks-report.json
-          if [ -s gitleaks-report.json ]; then
-            echo "SECRETS_FOUND=true" >> $GITHUB_ENV
-          fi
+      - name: Run Gitleaks
+        run: gitleaks detect --source=. --verbose
 
-      - name: Send Discord Notification
-        if: env.SECRETS_FOUND == 'true'
+      - name: Notify Discord if secrets found
+        if: failure()
         run: |
           curl -H "Content-Type: application/json" \
-            -X POST \
-            -d '{
-                  "username": "Gitleaks Bot",
-                  "content": "**⚠️ Gitleaks detected secrets!**\nCheck the GitHub Actions logs for more details."
-                }' \
-            ${{ secrets.DISCORD_WEBHOOK }}
+          -X POST -d '{"username": "Gitleaks Bot", "content": "⚠️ Secret detected in repository! Check GitHub Actions logs."}' \
+          ${{ secrets.DISCORD_WEBHOOK }}
